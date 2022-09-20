@@ -102,6 +102,7 @@ public:
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     // Initialize the SLAM system. It launches the Local Mapping, Loop Closing and Viewer threads.
+    // 初始化SLAM系统，加载了局部建图、回环检测以及可视化线程
     System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor, const bool bUseViewer = true, const int initFr = 0, const string &strSequence = std::string());
 
     // Proccess the given stereo frame. Images must be synchronized and rectified.
@@ -126,22 +127,23 @@ public:
     // This resumes local mapping thread and performs SLAM again.
     void DeactivateLocalizationMode();
 
-    // Returns true if there have been a big map change (loop closure, global BA)
+    // Returns true if there have been a big map change (loop closure, global BA)如果有巨大地图变动，例如回环，全局BA 将会返回为真
     // since last call to this function
     bool MapChanged();
 
-    // Reset the system (clear Atlas or the active map)
+    // Reset the system (clear Atlas or the active map) 系统重置，清理atlas或者正处于激活状态的地图
     void Reset();
     void ResetActiveMap();
 
-    // All threads will be requested to finish.
+    // All threads will be requested to finish. 所有线程都会结束
     // It waits until all threads have finished.
     // This function must be called before saving the trajectory.
     void Shutdown();
     bool isShutDown();
 
-    // Save camera trajectory in the TUM RGB-D dataset format.
-    // Only for stereo and RGB-D. This method does not work for monocular.
+    // TODO：保存单目下的TUM格式轨迹
+    // Save camera trajectory in the TUM RGB-D dataset format. 保存轨迹为TUM格式
+    // Only for stereo and RGB-D. This method does not work for monocular. 只对双目和RGB-D有效，对单目无效
     // Call first Shutdown()
     // See format details at: http://vision.in.tum.de/data/datasets/rgbd-dataset
     void SaveTrajectoryTUM(const string &filename);
@@ -167,7 +169,7 @@ public:
     // See format details at: http://www.cvlibs.net/datasets/kitti/eval_odometry.php
     void SaveTrajectoryKITTI(const string &filename);
 
-    // TODO: Save/Load functions
+    // TODO: Save/Load functions  保存地图，重载地图
     // SaveMap(const string &filename);
     // LoadMap(const string &filename);
 
@@ -215,7 +217,8 @@ private:
     // Tracker. It receives a frame and computes the associated camera pose.
     // It also decides when to insert a new keyframe, create some new MapPoints and
     // performs relocalization if tracking fails.
-    Tracking* mpTracker;
+    // 设置Tracking localmapping loopclosing类型的指针，作为私有变量，供system函数调用的时候使用
+    Tracking* mpTracker;  
 
     // Local Mapper. It manages the local map and performs local bundle adjustment.
     LocalMapping* mpLocalMapper;
@@ -231,6 +234,7 @@ private:
     MapDrawer* mpMapDrawer;
 
     // System threads: Local Mapping, Loop Closing, Viewer.
+    // 系统线程，只有局部建图，闭环以及可视化三个线程
     // The Tracking thread "lives" in the main execution thread that creates the System object.
     std::thread* mptLocalMapping;
     std::thread* mptLoopClosing;

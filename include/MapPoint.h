@@ -209,26 +209,32 @@ public:
 
 protected:    
 
-     // Position in absolute coordinates
+     // Position in absolute coordinates 世界坐标系下的坐标
      Eigen::Vector3f mWorldPos;
 
      // Keyframes observing the point and associated index in keyframe
+     // 能观测到该地图点的关键帧以及其在关键帧中相关联的索引值
      std::map<KeyFrame*,std::tuple<int,int> > mObservations;
      // For save relation without pointer, this is necessary for save/load function
      std::map<long unsigned int, int> mBackupObservationsId1;
      std::map<long unsigned int, int> mBackupObservationsId2;
 
      // Mean viewing direction
+     //  该MapPoint的平均观测方向
+    // 用于判断点是否在可视范围内
      Eigen::Vector3f mNormalVector;
 
      // Best descriptor to fast matching
+     // 最佳的描述子，用于快速实现匹配
      cv::Mat mDescriptor;
 
      // Reference KeyFrame
+     // 参考关键帧，通常情况下MapPoint的参考关键帧就是创建该MapPoint的那个关键帧
      KeyFrame* mpRefKF;
      long unsigned int mBackupRefKFId;
 
      // Tracking counters
+     // 地图点被跟踪到的次数
      int mnVisible;
      int mnFound;
 
@@ -239,14 +245,19 @@ protected:
      long long int mBackupReplacedId;
 
      // Scale invariance distances
+     // 根据ORB特征点的尺度不变性获取到的可以观察到这个地图点的最大、最小距离
      float mfMinDistance;
      float mfMaxDistance;
-
+    
+     // 地图点所属于的地图
      Map* mpMap;
 
      // Mutex
+     // 对当前点位姿操作时候的互斥量
      std::mutex mMutexPos;
+     // 对当前点特征操作时候的互斥量
      std::mutex mMutexFeatures;
+     // 对当前点地图操作时候的胡吃两？
      std::mutex mMutexMap;
 
 };

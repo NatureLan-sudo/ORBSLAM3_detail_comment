@@ -1,3 +1,11 @@
+/*
+ * @Author: Your Name you@example.com
+ * @Date: 2022-08-29 22:03:33
+ * @LastEditors: NatureLan-sudo lantianran282@163.com
+ * @LastEditTime: 2022-09-16 13:22:26
+ * @FilePath: /ORBSLAM3_detail_comment/src/Frame.cc
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
 /**
 * This file is part of ORB-SLAM3
 *
@@ -17,7 +25,6 @@
 */
 
 #include "Frame.h"
-
 #include "G2oTypes.h"
 #include "MapPoint.h"
 #include "KeyFrame.h"
@@ -56,6 +63,7 @@ Frame::Frame(): mpcpi(NULL), mpImuPreintegrated(NULL), mpPrevFrame(NULL), mpImuP
 
 
 //Copy Constructor
+
 Frame::Frame(const Frame &frame)
     :mpcpi(frame.mpcpi),mpORBvocabulary(frame.mpORBvocabulary), mpORBextractorLeft(frame.mpORBextractorLeft), mpORBextractorRight(frame.mpORBextractorRight),
      mTimeStamp(frame.mTimeStamp), mK(frame.mK.clone()), mK_(Converter::toMatrix3f(frame.mK)), mDistCoef(frame.mDistCoef.clone()),
@@ -101,18 +109,35 @@ Frame::Frame(const Frame &frame)
 #endif
 }
 
-// 立体匹配模式下的双目
+/**
+ * @brief: 立体匹配，双目+IMU模式
+ * @param [Mat] &imLeft: 左目图像
+ * @param [Mat] &imRight:右目图像
+ * @param [double] &timeStamp:时间戳
+ * @param [ORBextractor*] extractorLeft:左目的特征点提取器
+ * @param [ORBextractor*] extractorRight:右目的特征点提取器
+ * @param [ORBVocabulary*] voc:字典 
+ * @param [Mat] &K: 内参
+ * @param [Mat] &distCoef:去畸变参数
+ * @param [float] &bf:基线长度  
+ * @param [float] &thDepth: 远点、近点的区分
+ * @param [GeometricCamera*] pCamera: 相机模型  
+ * @param [Frame*] pPrevF: 上一帧
+ * @param [Calib] &ImuCalib: IMU配置的参数，噪声和游走
+ * @return [*]
+ */
 Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, ORBextractor* extractorLeft, ORBextractor* extractorRight, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth, GeometricCamera* pCamera, Frame* pPrevF, const IMU::Calib &ImuCalib)
     :mpcpi(NULL), mpORBvocabulary(voc),mpORBextractorLeft(extractorLeft),mpORBextractorRight(extractorRight), mTimeStamp(timeStamp), mK(K.clone()), mK_(Converter::toMatrix3f(K)), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth),
      mImuCalib(ImuCalib), mpImuPreintegrated(NULL), mpPrevFrame(pPrevF),mpImuPreintegratedFrame(NULL), mpReferenceKF(static_cast<KeyFrame*>(NULL)), mbIsSet(false), mbImuPreintegrated(false),
      mpCamera(pCamera) ,mpCamera2(nullptr), mbHasPose(false), mbHasVelocity(false)
 {
     // Frame ID
-    // Step 1 帧的ID 自增
+    //* Step 1 帧的ID 自增
     mnId=nNextId++;
 
     // Scale Level Info
-    // Step 2 计算图像金字塔的参数 
+    //* Step 2 计算图像金字塔的参数 
+    // 这个参数是配置文件OBRextractor里我们自己设置的，然后在前面的代码中读入了配置，所以这里直接赋值就行
 	// 获取图像金字塔的层数
     mnScaleLevels = mpORBextractorLeft->GetLevels();
     // 获得层与层之间的缩放比
@@ -132,6 +157,7 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
 #ifdef REGISTER_TIMES
     std::chrono::steady_clock::time_point time_StartExtORB = std::chrono::steady_clock::now();
 #endif
+    // TODO: 这里的时间怎么评估？
     // Step 3 对左目右目图像提取ORB特征点, 第一个参数0-左图， 1-右图。为加速计算，同时开了两个线程计算
     thread threadLeft(&Frame::ExtractORB,this,0,imLeft,0,0);
     // 对右目图像提取orb特征
@@ -152,14 +178,14 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     if(mvKeys.empty())
         return;
 
-    // Step 4 用OpenCV的矫正函数、内参对提取到的特征点进行矫正
+    //* Step 4 用OpenCV的矫正函数、内参对提取到的特征点进行矫正
     UndistortKeyPoints();
 
 #ifdef REGISTER_TIMES
     std::chrono::steady_clock::time_point time_StartStereoMatches = std::chrono::steady_clock::now();
 #endif
 
-    // Step 5 计算双目间特征点的匹配，只有匹配成功的特征点会计算其深度,深度存放在 mvDepth 
+    //* Step 5 计算双目间特征点的匹配，只有匹配成功的特征点会计算其深度,深度存放在 mvDepth 
 	// mvuRight中存储的应该是左图像中的点所匹配的在右图像中的点的横坐标（纵坐标相同）
     ComputeStereoMatches();
 
@@ -576,10 +602,10 @@ void Frame::SetImuPoseVelocity(const Eigen::Matrix3f &Rwb, const Eigen::Vector3f
     mVw = Vwb;
     mbHasVelocity = true;
 
-    Sophus::SE3f Twb(Rwb, twb);
-    Sophus::SE3f Tbw = Twb.inverse();
+    Sophus::SE3f Twb(Rwb, twb);  //IMU 到 world
+    Sophus::SE3f Tbw = Twb.inverse(); // world 到 IMU
 
-    mTcw = mImuCalib.mTcb * Tbw;
+    mTcw = mImuCalib.mTcb * Tbw; // 配置文件给了 IMU 到 相机的外参数，因此可以计算出mTcw 世界到相机的变换
 
     UpdatePoseMatrices();
     mbIsSet = true;
@@ -1330,7 +1356,7 @@ void Frame::ComputeStereoMatches()
                 // 保存最相似点的列坐标(x)信息
                 // 保存归一化sad最小相似度
                 // Step 5. 最优视差值/深度选择.
-                mvDepth[iL]=mbf/disparity;
+                mvDepth[iL]=mbf/disparity; // 计算得到了深度，用的是左目的ID存的，双目模型得到深度 基线/视差，对于单目，是使用三角测量恢复深度
                 mvuRight[iL] = bestuR;
                 vDistIdx.push_back(pair<int,int>(bestDist,iL));
             }
@@ -1401,8 +1427,8 @@ bool Frame::UnprojectStereo(const int &i, Eigen::Vector3f &x3D)
         const float v = mvKeysUn[i].pt.y;
         const float x = (u-cx)*z*invfx;
         const float y = (v-cy)*z*invfy;
-        Eigen::Vector3f x3Dc(x, y, z);
-        x3D = mRwc * x3Dc + mOw;
+        Eigen::Vector3f x3Dc(x, y, z); // 相机坐标系下的3D坐标
+        x3D = mRwc * x3Dc + mOw; //世界坐标系下的3D坐标
         return true;
     } else
         return false;

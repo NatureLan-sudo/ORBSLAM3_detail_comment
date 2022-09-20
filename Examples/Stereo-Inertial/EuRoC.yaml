@@ -61,6 +61,7 @@ Stereo.T_c1_c2: !!opencv-matrix
          0,0,0,1.000000000000000]
 
 # Transformation from camera 0 to body-frame (imu)
+# 相机和IMU之间的外参
 IMU.T_b_c1: !!opencv-matrix
   rows: 4
   cols: 4

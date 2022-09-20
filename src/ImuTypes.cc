@@ -206,10 +206,10 @@ void Preintegrated::CopyFrom(Preintegrated *pImuPre)
  */
 void Preintegrated::Initialize(const Bias &b_)
 {
-    dR.setIdentity();
-    dV.setZero();
+    dR.setIdentity(); // 创建尺寸与dR相同的单位矩阵
+    dV.setZero();     // 创建尺寸与dV相同的零向量
     dP.setZero();
-    JRg.setZero();
+    JRg.setZero();     //陀螺仪旋转雅克比？
     JVg.setZero();
     JVa.setZero();
     JPg.setZero();

@@ -40,12 +40,13 @@ namespace ORB_SLAM3
 namespace IMU
 {
 
-const float GRAVITY_VALUE=9.81;
+const float GRAVITY_VALUE=9.81;     //重力值设定
 
 //IMU measurement (gyro, accelerometer and timestamp)
 class Point
 {
 public:
+    //两种构造函数
     Point(const float &acc_x, const float &acc_y, const float &acc_z,
              const float &ang_vel_x, const float &ang_vel_y, const float &ang_vel_z,
              const double &timestamp): a(acc_x,acc_y,acc_z), w(ang_vel_x,ang_vel_y,ang_vel_z), t(timestamp){}
@@ -121,7 +122,7 @@ public:
     // Sophus/Eigen implementation
     Sophus::SE3<float> mTcb;
     Sophus::SE3<float> mTbc;
-    Eigen::DiagonalMatrix<float,6> Cov, CovWalk;
+    Eigen::DiagonalMatrix<float,6> Cov, CovWalk; // 存储在对角线上 cov是噪声？covwalk是游走？
     bool mbIsSet;
 };
 

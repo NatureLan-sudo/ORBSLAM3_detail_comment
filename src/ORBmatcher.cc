@@ -1961,11 +1961,11 @@ namespace ORB_SLAM3
         // const float factor = HISTO_LENGTH/360.0f;
         const float factor = 1.0f/HISTO_LENGTH;
 
-        // Step 2 计算当前帧和前一帧的平移向量
-        //当前帧的相机位姿
+        //* Step 2 计算当前帧和前一帧的平移向量
+        //当前帧的相机位姿，有恒速追踪模型得到的
         const Sophus::SE3f Tcw = CurrentFrame.GetPose();
         const Eigen::Vector3f twc = Tcw.inverse().translation();
-
+        //上一帧的相机位姿，当前帧到上一帧的平移量
         const Sophus::SE3f Tlw = LastFrame.GetPose();
         const Eigen::Vector3f tlc = Tlw * twc; 
 
@@ -1973,29 +1973,30 @@ namespace ORB_SLAM3
         const bool bForward = tlc(2)>CurrentFrame.mb && !bMono;     // 非单目情况，如果Z大于基线，则表示相机明显前进
         const bool bBackward = -tlc(2)>CurrentFrame.mb && !bMono;   // 非单目情况，如果-Z小于基线，则表示相机明显后退
 
-        //  Step 3 对于前一帧的每一个地图点，通过相机投影模型，得到投影到当前帧的像素坐标
+        //*  Step 3 对于前一帧的每一个地图点，通过相机投影模型，得到投影到当前帧的像素坐标
         for(int i=0; i<LastFrame.N; i++)
         {
             MapPoint* pMP = LastFrame.mvpMapPoints[i];
 
-            if(pMP)
+            if(pMP) // 点不为空
             {
-                if(!LastFrame.mvbOutlier[i])
+                if(!LastFrame.mvbOutlier[i]) // 该地图点不是外点
                 {
                     // 对上一帧有效的MapPoints投影到当前帧坐标系
-                    Eigen::Vector3f x3Dw = pMP->GetWorldPos();
-                    Eigen::Vector3f x3Dc = Tcw * x3Dw;
-
+                    Eigen::Vector3f x3Dw = pMP->GetWorldPos(); //返回当前3D点在世界坐标系中的坐标
+                    Eigen::Vector3f x3Dc = Tcw * x3Dw;         //由初始估计的位姿将3D点投影到当前帧下，得到当前帧相机坐标系下的坐标
+                    
                     const float xc = x3Dc(0);
                     const float yc = x3Dc(1);
                     const float invzc = 1.0/x3Dc(2);
-
+                    
+                    // 如果第三个坐标为负，那就是深度为负了，点不对，就丢了这个点
                     if(invzc<0)
                         continue;
 
-                    // 投影到当前帧中
+                    // 投影到当前帧中，得到像素坐标
                     Eigen::Vector2f uv = CurrentFrame.mpCamera->project(x3Dc);
-
+                    // 排除一下投影点的位置对不对 
                     if(uv(0)<CurrentFrame.mnMinX || uv(0)>CurrentFrame.mnMaxX)
                         continue;
                     if(uv(1)<CurrentFrame.mnMinY || uv(1)>CurrentFrame.mnMaxY)
@@ -2011,10 +2012,11 @@ namespace ORB_SLAM3
                     // 记录候选匹配点的id
                     vector<size_t> vIndices2;
 
-                    // Step 4 根据相机的前后前进方向来判断搜索尺度范围。
+                    //* Step 4 根据相机的前后前进方向来判断搜索尺度范围。
                     // 以下可以这么理解，例如一个有一定面积的圆点，在某个尺度n下它是一个特征点
                     // 当相机前进时，圆点的面积增大，在某个尺度m下它是一个特征点，由于面积增大，则需要在更高的尺度下才能检测出来
                     // 当相机后退时，圆点的面积减小，在某个尺度m下它是一个特征点，由于面积减小，则需要在更低的尺度下才能检测出来
+                    // 给定一个像素点和搜索半径，获得范围内所有的特征点
                     if(bForward)  // 前进,则上一帧兴趣点在所在的尺度nLastOctave<=nCurOctave
                         vIndices2 = CurrentFrame.GetFeaturesInArea(uv(0),uv(1), radius, nLastOctave);
                     else if(bBackward)  // 后退,则上一帧兴趣点在所在的尺度0<=nCurOctave<=nLastOctave
@@ -2022,15 +2024,15 @@ namespace ORB_SLAM3
                     else  // 在[nLastOctave-1, nLastOctave+1]中搜索
                         vIndices2 = CurrentFrame.GetFeaturesInArea(uv(0),uv(1), radius, nLastOctave-1, nLastOctave+1);
 
-                    if(vIndices2.empty())
+                    if(vIndices2.empty()) // 说明没有搜索到兴趣点
                         continue;
 
-                    const cv::Mat dMP = pMP->GetDescriptor();
+                    const cv::Mat dMP = pMP->GetDescriptor(); // 当前3D点的描述子
 
                     int bestDist = 256;
                     int bestIdx2 = -1;
 
-                    // Step 5 遍历候选匹配点，寻找距离最小的最佳匹配点 
+                    //× Step 5 遍历候选匹配点，寻找距离最小的最佳匹配点 
                     for(vector<size_t>::const_iterator vit=vIndices2.begin(), vend=vIndices2.end(); vit!=vend; vit++)
                     {
                         const size_t i2 = *vit;
@@ -2039,7 +2041,7 @@ namespace ORB_SLAM3
                         if(CurrentFrame.mvpMapPoints[i2])
                             if(CurrentFrame.mvpMapPoints[i2]->Observations()>0)
                                 continue;
-
+                        //!  怎么感觉这个地方错了，如果判断是双目，应该是！=-1啊
                         if(CurrentFrame.Nleft == -1 && CurrentFrame.mvuRight[i2]>0)
                         {
                             // 双目和rgbd的情况，需要保证右图的点也在搜索半径以内
@@ -2049,15 +2051,15 @@ namespace ORB_SLAM3
                                 continue;
                         }
 
-                        const cv::Mat &d = CurrentFrame.mDescriptors.row(i2);
+                        const cv::Mat &d = CurrentFrame.mDescriptors.row(i2); //常量引用必须初始化
 
-                        const int dist = DescriptorDistance(dMP,d);
+                        const int dist = DescriptorDistance(dMP,d); // 当前特征点和MapPoint点描述子之间的距离
 
                         if(dist<bestDist)
                         {
                             bestDist=dist;
                             bestIdx2=i2;
-                        }
+                        } // 找到距离最近的一个点
                     }
 
                     // 最佳匹配距离要小于设定阈值
@@ -2086,7 +2088,8 @@ namespace ORB_SLAM3
                             rotHist[bin].push_back(bestIdx2);
                         }
                     }
-                    if(CurrentFrame.Nleft != -1){
+
+                    if(CurrentFrame.Nleft != -1){ //如果左目提取的关键点的数量不为-1
                         Eigen::Vector3f x3Dr = CurrentFrame.GetRelativePoseTrl() * x3Dc;
                         Eigen::Vector2f uv = CurrentFrame.mpCamera->project(x3Dr);
 
@@ -2151,13 +2154,13 @@ namespace ORB_SLAM3
                             }
                         }
 
-                    }
-                }
-            }
-        }
+                    } //左目提取的关键点数量不为-1
+                }//该点不是外点
+            }// 地图点数量部不为0
+        }//对于前一帧的每一个地图点
 
         //Apply rotation consistency
-        //  Step 7 进行旋转一致检测，剔除不一致的匹配
+        //*  Step 7 进行旋转一致检测，剔除不一致的匹配
         if(mbCheckOrientation)
         {
             int ind1=-1;
@@ -2201,7 +2204,7 @@ namespace ORB_SLAM3
         Eigen::Vector3f Ow = Tcw.inverse().translation();
 
         // Rotation Histogram (to check rotation consistency)
-        // Step 1 建立旋转直方图，用于检测旋转一致性
+        //* Step 1 建立旋转直方图，用于检测旋转一致性
         vector<int> rotHist[HISTO_LENGTH];
         for(int i=0;i<HISTO_LENGTH;i++)
             rotHist[i].reserve(500);
@@ -2209,7 +2212,7 @@ namespace ORB_SLAM3
 
         const vector<MapPoint*> vpMPs = pKF->GetMapPointMatches();
 
-        // Step 2 遍历关键帧中的每个地图点，通过相机投影模型，得到投影到当前帧的像素坐标
+        //* Step 2 遍历关键帧中的每个地图点，通过相机投影模型，得到投影到当前帧的像素坐标
         for(size_t i=0, iend=vpMPs.size(); i<iend; i++)
         {
             MapPoint* pMP = vpMPs[i];
@@ -2219,7 +2222,7 @@ namespace ORB_SLAM3
                 // 地图点存在 并且 不在已有地图点集合里
                 if(!pMP->isBad() && !sAlreadyFound.count(pMP))
                 {
-                    //Project
+                    //Project投影
                     Eigen::Vector3f x3Dw = pMP->GetWorldPos();
                     Eigen::Vector3f x3Dc = Tcw * x3Dw;
 
@@ -2248,7 +2251,7 @@ namespace ORB_SLAM3
                     // 搜索半径和尺度相关
                     const float radius = th*CurrentFrame.mvScaleFactors[nPredictedLevel];
 
-                    //  Step 3 搜索候选匹配点
+                    //*  Step 3 搜索候选匹配点
                     const vector<size_t> vIndices2 = CurrentFrame.GetFeaturesInArea(uv(0), uv(1), radius, nPredictedLevel-1, nPredictedLevel+1);
 
                     if(vIndices2.empty())
@@ -2258,7 +2261,7 @@ namespace ORB_SLAM3
 
                     int bestDist = 256;
                     int bestIdx2 = -1;
-                    // Step 4 遍历候选匹配点，寻找距离最小的最佳匹配点 
+                    //* Step 4 遍历候选匹配点，寻找距离最小的最佳匹配点 
                     for(vector<size_t>::const_iterator vit=vIndices2.begin(); vit!=vIndices2.end(); vit++)
                     {
                         const size_t i2 = *vit;

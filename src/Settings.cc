@@ -147,8 +147,14 @@ cv::Mat Settings::readParameter<cv::Mat>(cv::FileStorage &fSettings, const std::
         return node.mat();
     }
 }
-
-Settings::Settings(const std::string &configFile, const int &sensor) : bNeedToUndistort_(false), bNeedToRectify_(false), bNeedToResize1_(false), bNeedToResize2_(false)
+/**
+ * @description: 构造函数，读取配置文件
+ * @param {string} &configFile 配置文件的地址
+ * @param {int} &sensor        当前的传感器模式
+ * @return {*}
+ */
+Settings::Settings(const std::string &configFile, const int &sensor) 
+: bNeedToUndistort_(false), bNeedToRectify_(false), bNeedToResize1_(false), bNeedToResize2_(false)
 {
     sensor_ = sensor;
 
@@ -166,11 +172,11 @@ Settings::Settings(const std::string &configFile, const int &sensor) : bNeedToUn
         cout << "Loading settings from " << configFile << endl;
     }
 
-    // Read first camera
+    // Read first camera                            读第一个相机的配置
     readCamera1(fSettings);
     cout << "\t-Loaded camera 1" << endl;
 
-    // Read second camera if stereo (not rectified)
+    // Read second camera if stereo (not rectified) 如果是双目或者双目_IMU模式，读取第二个相机的配置
     if (sensor_ == System::STEREO || sensor_ == System::IMU_STEREO)
     {
         readCamera2(fSettings);
@@ -180,25 +186,28 @@ Settings::Settings(const std::string &configFile, const int &sensor) : bNeedToUn
     // Read image info
     readImageInfo(fSettings);
     cout << "\t-Loaded image info" << endl;
-
+    // 如果是有IMU 融合的模式，读取IMU的配置信息
     if (sensor_ == System::IMU_MONOCULAR || sensor_ == System::IMU_STEREO || sensor_ == System::IMU_RGBD)
     {
         readIMU(fSettings);
         cout << "\t-Loaded IMU calibration" << endl;
     }
-
+    // 如果是RGBD读取RGB相机的配置信息
     if (sensor_ == System::RGBD || sensor_ == System::IMU_RGBD)
     {
         readRGBD(fSettings);
         cout << "\t-Loaded RGB-D calibration" << endl;
     }
-
+    // 读ORB配置
     readORB(fSettings);
     cout << "\t-Loaded ORB settings" << endl;
+    // 读可视化配置
     readViewer(fSettings);
     cout << "\t-Loaded viewer settings" << endl;
+    // 读存取配置，这里要加载与地图管理系统atlas相关的信息
     readLoadAndSave(fSettings);
     cout << "\t-Loaded Atlas settings" << endl;
+    // 读其他的参数
     readOtherParameters(fSettings);
     cout << "\t-Loaded misc parameters" << endl;
 

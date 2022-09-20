@@ -221,7 +221,7 @@ namespace ORB_SLAM3 {
         /*
          * Save & load maps
          */
-        std::string sLoadFrom_, sSaveto_;
+        std::string sLoadFrom_, sSaveto_;  // 地图从哪里加载，要保存到哪里
 
         /*
          * Other stuff
