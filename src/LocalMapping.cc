@@ -89,7 +89,7 @@ void LocalMapping::SetTracker(Tracking *pTracker)
 }
 
 /**
- * @brief 局部地图线程主函数
+ * @brief 局部地图线程主函数,需要进行的都在这个函数里头
  */
 void LocalMapping::Run()
 {
@@ -97,11 +97,11 @@ void LocalMapping::Run()
     mbFinished = false;
 
     // 主循环
-    while(1)
+    while(1) // 一直存在
     {
         // Tracking will see that Local Mapping is busy
         // Step 1 告诉Tracking，LocalMapping正处于繁忙状态，请不要给我发送关键帧打扰我
-        // LocalMapping线程处理的关键帧都是Tracking线程发过来的
+        // LocalMapping线程处理的关键帧都是Tracking线程发过来的，Tracking处理好了就
         SetAcceptKeyFrames(false);
 
         // Check if there are keyframes in the queue
@@ -115,7 +115,8 @@ void LocalMapping::Run()
             std::chrono::steady_clock::time_point time_StartProcessKF = std::chrono::steady_clock::now();
 #endif
             // BoW conversion and insertion in Map
-            // Step 2 处理列表中的关键帧，包括计算BoW、更新观测、描述子、共视图，插入到地图等
+            //* Step 2 处理列表中的关键帧，包括计算BoW、更新观测、描述子、共视图，插入到地图等
+            // BoW用于实现回环，描述子是特征点的描述子
             ProcessNewKeyFrame();
 #ifdef REGISTER_TIMES
             std::chrono::steady_clock::time_point time_EndProcessKF = std::chrono::steady_clock::now();
@@ -125,7 +126,7 @@ void LocalMapping::Run()
 #endif
 
             // Check recent MapPoints
-            // Step 3 根据地图点的观测情况剔除质量不好的地图点
+            //* Step 3 根据地图点的观测情况剔除质量不好的地图点
             MapPointCulling();
 #ifdef REGISTER_TIMES
             std::chrono::steady_clock::time_point time_EndMPCulling = std::chrono::steady_clock::now();
@@ -135,7 +136,7 @@ void LocalMapping::Run()
 #endif
 
             // Triangulate new MapPoints
-            // Step 4 当前关键帧与相邻关键帧通过三角化产生新的地图点，使得跟踪更稳
+            //* Step 4 当前关键帧与相邻关键帧通过三角化产生新的地图点，使得跟踪更稳
             CreateNewMapPoints();
 
             // 注意orbslam2中放在了函数SearchInNeighbors（用到了mbAbortBA）后面，应该放这里更合适
@@ -145,7 +146,7 @@ void LocalMapping::Run()
             if(!CheckNewKeyFrames())
             {
                 // Find more matches in neighbor keyframes and fuse point duplications
-                //  Step 5 检查并融合当前关键帧与相邻关键帧帧（两级相邻）中重复的地图点
+                //*  Step 5 检查并融合当前关键帧与相邻关键帧帧（两级相邻）中重复的地图点
                 // 先完成相邻关键帧与当前关键帧的地图点的融合（在相邻关键帧中查找当前关键帧的地图点），
                 // 再完成当前关键帧与相邻关键帧的地图点的融合（在当前关键帧中查找当前相邻关键帧的地图点）
                 SearchInNeighbors();
@@ -237,7 +238,7 @@ void LocalMapping::Run()
                 {
                     // 在函数InitializeIMU里设置IMU成功初始化标志 SetImuInitialized
                     // IMU第一次初始化
-                    if (mbMonocular)
+                    if (mbMonocular) // 
                         InitializeIMU(1e2, 1e10, true);
                     else
                         InitializeIMU(1e2, 1e5, true);
