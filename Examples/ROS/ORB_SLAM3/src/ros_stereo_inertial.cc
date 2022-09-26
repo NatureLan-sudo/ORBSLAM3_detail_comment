@@ -73,7 +73,7 @@ public:
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "Stereo_Inertial");
+  ros::init(argc, argv, "Stereo_Inertial"); //初始化节点为Stereo_Inertial
   ros::NodeHandle n("~");
   ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
   bool bEqual = false;
@@ -138,6 +138,7 @@ int main(int argc, char **argv)
     }
 
   // Maximum delay, 5 seconds
+  // 相当于通过ROS 我们像通讯一样在接受东西，没有我们加载图像的步骤，但是其他的应该都一样
   ros::Subscriber sub_imu = n.subscribe("/imu", 1000, &ImuGrabber::GrabImu, &imugb); 
   ros::Subscriber sub_img_left = n.subscribe("/camera/left/image_raw", 100, &ImageGrabber::GrabImageLeft,&igb);
   ros::Subscriber sub_img_right = n.subscribe("/camera/right/image_raw", 100, &ImageGrabber::GrabImageRight,&igb);
@@ -150,7 +151,7 @@ int main(int argc, char **argv)
 }
 
 
-
+// 左目图像的回调函数
 void ImageGrabber::GrabImageLeft(const sensor_msgs::ImageConstPtr &img_msg)
 {
   mBufMutexLeft.lock();
@@ -160,6 +161,7 @@ void ImageGrabber::GrabImageLeft(const sensor_msgs::ImageConstPtr &img_msg)
   mBufMutexLeft.unlock();
 }
 
+// 右目图像的回调函数
 void ImageGrabber::GrabImageRight(const sensor_msgs::ImageConstPtr &img_msg)
 {
   mBufMutexRight.lock();
@@ -169,6 +171,7 @@ void ImageGrabber::GrabImageRight(const sensor_msgs::ImageConstPtr &img_msg)
   mBufMutexRight.unlock();
 }
 
+//
 cv::Mat ImageGrabber::GetImage(const sensor_msgs::ImageConstPtr &img_msg)
 {
   // Copy the ros image message to cv::Mat.
@@ -275,6 +278,7 @@ void ImageGrabber::SyncWithImu()
   }
 }
 
+// IMU数据的回调
 void ImuGrabber::GrabImu(const sensor_msgs::ImuConstPtr &imu_msg)
 {
   mBufMutex.lock();

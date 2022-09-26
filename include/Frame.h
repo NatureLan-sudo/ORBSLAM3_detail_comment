@@ -193,6 +193,7 @@ public:
     ORBVocabulary* mpORBvocabulary;
 
     // Feature extractor. The right is used only in the stereo case.
+    // 特征提取器，一般只用左边，右边只用于双目的情况
     ORBextractor* mpORBextractorLeft, *mpORBextractorRight;
 
     // Frame timestamp.
@@ -229,6 +230,7 @@ public:
     std::vector<cv::KeyPoint> mvKeysUn;
 
     // Corresponding stereo coordinate and depth for each keypoint.
+    // 双目坐标系下每个点的深度
     std::vector<MapPoint*> mvpMapPoints;
     // "Monocular" keypoints have a negative value.
     std::vector<float> mvuRight;
@@ -260,6 +262,7 @@ public:
     IMU::Calib mImuCalib;
 
     // Imu preintegration from last keyframe
+    // 上一帧的预积分
     IMU::Preintegrated* mpImuPreintegrated;
     KeyFrame* mpLastKeyFrame;
 

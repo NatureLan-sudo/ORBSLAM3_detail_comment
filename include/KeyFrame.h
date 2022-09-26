@@ -406,6 +406,7 @@ public:
     const int mnMaxY;
 
     // Preintegrated IMU measurements from previous keyframe
+    // 来自上一个关键帧的预积分测量值
     KeyFrame* mPrevKF;
     KeyFrame* mNextKF;
 
